@@ -2,6 +2,10 @@
 require('dotenv').config()
 const express = require('express');
 const morgan = require('morgan');
+const cors = require('cors');
+//this hides pieces of info that a malicious party can use to focus their attacks and helmet is installed to do the hiding for us
+//this isnt exclusive protection, but it hides info to make attacks harder
+const helmet = require('helmet');
 const POKEDEX = require('./pokedex.json');
 
 //temporarily adding a log statement that logs this new variable
@@ -9,6 +13,8 @@ console.log(process.env.API_TOKEN)
 
 const app = express();
 app.use(morgan('dev'));
+app.use(cors());
+app.use(helmet());
 
 //The validateBearerToken middleware will take 3 parameters instead of 2. In addition to req and res, validateBearerToken will also take a callback function as the third parameter
 app.use(function validateBearerToken(req, res, next) {
