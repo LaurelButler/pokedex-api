@@ -2,6 +2,7 @@
 require('dotenv').config()
 const express = require('express');
 const morgan = require('morgan');
+const POKEDEX = require('./pokedex.json');
 
 //temporarily adding a log statement that logs this new variable
 console.log(process.env.API_TOKEN)
@@ -9,23 +10,17 @@ console.log(process.env.API_TOKEN)
 const app = express();
 app.use(morgan('dev'));
 
-
-// use the app.get method to construct our endpoint and create a separate middleware function to handle the request
-//building your endpoints by writing the callback as an anonymous function is still valid but here i am separating the callback out into a named function for modularity and reusability
-
-//hardcoding the array of valid types
-const validTypes = [`Bug`, `Dark`, `Dragon`, `Electric`, `Fairy`, `Fighting`, `Fire`, `Flying`, `Ghost`, `Grass`, `Ground`, `Ice`, `Normal`, `Poison`, `Psychich`, `Rock`, `Steel`, `Water`]
-
 //The validateBearerToken middleware will take 3 parameters instead of 2. In addition to req and res, validateBearerToken will also take a callback function as the third parameter
 app.use(function validateBearerToken(req, res, next) {
     //to read a request header in express you use req.get('header-name')
     //We only care about the token for this header so let's split the value over the empty space: 
     //now there is an array with the token in the second position, so we can get the token: 
+    debugger
     const apiToken = process.env.API_TOKEN;
     const authToken = req.get('Authorization');
     //when tokens dont match there needs to be a response with an unauthorized status code and error message
     //we need to check for the presence of the token header before we split it. If the token isn't present, we want to respond with the same error for when the token is present but invalid instead of "TypeError: Cannot read property 'split' of undefined"
-    if(!authToken || authToken.split(' ')[1] !== apiToken) {
+    if(!authToken && authToken.split(' ')[1] !== apiToken) {
         return res.status(401).json({ error: 'Unauthorized request' })
         //move to the next() middleware
     }
@@ -33,20 +28,39 @@ app.use(function validateBearerToken(req, res, next) {
     next()
 });
 
-function handleGetTypes(req, res) {
-    //sending it back as JSON within the request handler for GET/types
-    res.json(validTypes);
-};
 
+// use the app.get method to construct our endpoint and create a separate middleware function to handle the request
+//building your endpoints by writing the callback as an anonymous function is still valid but here i am separating the callback out into a named function for modularity and reusability
+
+
+//hardcoding the array of valid types
+const validTypes = [`Bug`, `Dark`, `Dragon`, `Electric`, `Fairy`, `Fighting`, `Fire`, `Flying`, `Ghost`, `Grass`, `Ground`, `Ice`, `Normal`, `Poison`, `Psychich`, `Rock`, `Steel`, `Water`]
 
 // For the endpoint, we can pass the path of /types as the first argument and our handleGetTypes middleware function as the second argument. This second argument is a callback - a function passed into another function as an argument
-app.get('/types', handleGetTypes);
+app.get('/types',  function handleGetTypes(req, res) {
+    //sending it back as JSON within the request handler for GET/types
+    res.json(validTypes)
+});
 
 //api token is in place and can now be used to validate every request that comes into the server
-function handleGetPokemon(req, res) {
-    res.send('Hello, Pokemon');
-};
-app.get('/pokemon', handleGetPokemon);
+app.get('/pokemon',  function handleGetPokemon(req, res) {
+    let response = POKEDEX.pokemon;
+    
+    if(req.query.name) {
+        response = response.filter(pokemon =>
+            pokemon.name.toLowerCase().includes(req.query.name.toLowerCase())
+            )
+    }
+    console.log(response);
+    //both input and search when making case sensitive
+    if(req.query.type) {
+        response = response.filter(pokemon => 
+            pokemon.type.includes(req.query.type)
+        )
+    }
+    //how do we make this case sensitive because type is an array
+    res.json(response);
+});
 
 //validation should happen before either handleGetTypes or handleGetPokemon requests handlers
 //these request handlers are called middleware and can be composed in different sequences and configurations through Express
